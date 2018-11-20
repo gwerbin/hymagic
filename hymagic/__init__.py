@@ -7,6 +7,12 @@
 # Copyright (c) 2013 Will Kahn-Greene <willg@bluesock.org>
 # Copyright (c) 2013 Bob Tolbert <bob@tolbert.org>
 #
+# hymagic is an adaptation of the HyRepl to allow ipython iteration
+# hymagic author - Todd Iverson
+# Available as github.com/yardsale8/hymagic
+#
+# Copyright (c) 2018 Greg Werbin <outthere@me.gregwerbin.com>
+#
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the "Software"),
 # to deal in the Software without restriction, including without limitation
@@ -24,66 +30,48 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 # DEALINGS IN THE SOFTWARE.
-#
-# hymagic is an adaptation of the HyRepl to allow ipython iteration
-# hymagic author - Todd Iverson
-# Available as github.com/yardsale8/hymagic
 
-import argparse
-import code
 import ast
 import sys
 
 import hy
-
 from hy.lex import LexException, PrematureEndOfInput, tokenize
 from hy.compiler import hy_compile, HyTypeError
-from hy.importer import ast_compile, import_buffer_to_module
-from hy.completer import completion
-
-from hy.macros import macro, require
-from hy.models.expression import HyExpression
-from hy.models.string import HyString
-from hy.models.symbol import HySymbol
-
-from hy._compat import builtins
+from hy.importer import ast_compile
+from IPython.core.magic import Magics, magics_class, line_cell_magic
 
 SIMPLE_TRACEBACKS = True
 
-
-
-from IPython.core.magic import Magics, magics_class, line_cell_magic
-
-
 @magics_class
-class HylangMagics(Magics):
-    """Magic for the hylang lisp language
-    """
+class HyMagics(Magics):
+    """ IPython magic for Hy """
     def __init__(self, shell):
         """
         Parameters
         ----------
         shell : IPython shell
-
         """
-        super(HylangMagics, self).__init__(shell)
+        super(HyMagics, self).__init__(shell)
+
     @line_cell_magic
-    def hylang(self, line, cell=None, filename='<input>', symbol='single'):
+    def hy(self, line, cell=None, filename='<input>', symbol='single'):
         """ Ipython magic function for running hylang code in ipython
-        Use %hylang one line of code or
-            %%hylang for a block or cell
-            Note that we pass the AST directly to IPython."""
+
+        Note that we pass the AST directly to IPython.
+        """
         global SIMPLE_TRACEBACKS
         source = cell if cell else line
+
         try:
             tokens = tokenize(source)
         except PrematureEndOfInput:
-            print( "Premature End of Input" )
+            print("Premature End of Input")
         except LexException as e:
             if e.source is None:
                 e.source = source
                 e.filename = filename
             print(str(e))
+
         try:
             _ast = hy_compile(tokens, "__console__", root=ast.Interactive)
             self.shell.run_ast_nodes(_ast.body,'<input>',compiler=ast_compile)
@@ -97,6 +85,13 @@ class HylangMagics(Magics):
                 self.shell.showtraceback()
         except Exception:
             self.shell.showtraceback()
-def load_ipython_extension(ip):
-    """Load the extension in IPython."""
-    ip.register_magics(HylangMagics)
+
+    @line_cell_magic
+    def hylang(self, line, cell=None, filename='<input>', symbol='single'):
+        """ Legacy alias for %hy / %%hy """
+        return self.hy(line, cell=cell, filename=filename, symbol=symbol)
+
+
+def load_ipython_extension(ipython):
+    """ Load the extension in IPython """
+    ipython.register_magics(HyMagics)
