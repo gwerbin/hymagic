@@ -40,7 +40,7 @@ from hy.compiler import hy_compile, HyTypeError
 from hy.importer import ast_compile
 from IPython.core.magic import Magics, magics_class, line_cell_magic
 
-SIMPLE_TRACEBACKS = True
+# SIMPLE_TRACEBACKS = True
 
 @magics_class
 class HyMagics(Magics):
@@ -59,18 +59,22 @@ class HyMagics(Magics):
 
         Note that we pass the AST directly to IPython.
         """
-        global SIMPLE_TRACEBACKS
+        # global SIMPLE_TRACEBACKS
         source = cell if cell else line
 
-        try:
-            tokens = tokenize(source)
-        except PrematureEndOfInput:
-            print("Premature End of Input")
-        except LexException as e:
-            if e.source is None:
-                e.source = source
-                e.filename = filename
-            print(str(e))
+        tokens = tokenize(source)
+        # TODO: how to get nice tracebacks for these using self.shell.showtraceback() or equivalent?
+        # try:
+        #     tokens = tokenize(source)
+        # except PrematureEndOfInput:
+        #     print("Premature End of Input")
+        #     return
+        # except LexException as e:
+        #     if e.source is None:
+        #         e.source = source
+        #         e.filename = filename
+        #     print(str(e))
+        #     return
 
         try:
             _ast = hy_compile(tokens, "__console__", root=ast.Interactive)
@@ -79,19 +83,20 @@ class HyMagics(Magics):
             if e.source is None:
                 e.source = source
                 e.filename = filename
-            if SIMPLE_TRACEBACKS:
-                print(str(e))
-            else:
-                self.shell.showtraceback()
-        except Exception:
+            # if SIMPLE_TRACEBACKS:
+            #     print(str(e))
+            # else:
+            #     self.shell.showtraceback()
             self.shell.showtraceback()
 
-    @line_cell_magic
-    def hylang(self, line, cell=None, filename='<input>', symbol='single'):
-        """ Legacy alias for %hy / %%hy """
-        return self.hy(line, cell=cell, filename=filename, symbol=symbol)
+        except Exception:
+            self.shell.showtraceback()
+        #else:
+        #    print('ok')
 
 
 def load_ipython_extension(ipython):
     """ Load the extension in IPython """
-    ipython.register_magics(HyMagics)
+    ipython.register_magics(HyMagics(ipython))
+    ipython.magics_manager.register_alias('hylang', 'hy', magic_kind='line')
+    ipython.magics_manager.register_alias('hylang', 'hy', magic_kind='cell')
