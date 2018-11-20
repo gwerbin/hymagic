@@ -38,6 +38,7 @@ import hy
 from hy.lex import LexException, PrematureEndOfInput, tokenize
 from hy.compiler import hy_compile, HyTypeError
 from hy.importer import ast_compile
+from IPython.core.interactiveshell import ExecutionResult
 from IPython.core.magic import Magics, magics_class, line_cell_magic
 
 # SIMPLE_TRACEBACKS = True
@@ -77,8 +78,15 @@ class HyMagics(Magics):
         #     return
 
         try:
-            _ast = hy_compile(tokens, "__console__", root=ast.Interactive)
-            self.shell.run_ast_nodes(_ast.body,'<input>',compiler=ast_compile)
+            cell_ast = hy_compile(tokens, "__console__")
+            nodes = self.shell.run_ast_nodes(cell_ast.body, '<input>', interactivity='last_expr', compiler=ast_compile)
+
+            # see https://github.com/ipython/ipython/blob/8e7c5f093ba469e6dffdff4bd9bf63abeac1ba60/IPython/core/async_helpers.py#L57-L74
+            try:
+                nodes.send(None)
+            except StopIteration as exc:
+                any_error = exc.value
+
         except HyTypeError as e:
             if e.source is None:
                 e.source = source
